@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 import sqlite3
+from checker import check_logged_in
 
 
 class UseDatabase:
@@ -19,10 +20,23 @@ class UseDatabase:
 
 
 app = Flask(__name__)
+app.secret_key = 'YouWillNeverGuessSecretKey'
 
 with UseDatabase('appdatabase.db') as cursor:
 
     cursor.execute("CREATE TABLE IF NOT EXISTS users(id integer PRIMARY KEY, phrase text, letters text, ip text, browser_string text, results text)")
+
+
+@app.route('/login')
+def do_login():
+    session['logged_in'] = True
+    return 'You are now logged in.'
+
+
+@app.route('/logout')
+def do_logout():
+    session.pop('logged_in')
+    return 'You are now logged out.'
 
 
 def log_request(req, res):
@@ -63,6 +77,7 @@ def entry_page() -> 'html':
 
 
 @app.route('/viewlog')
+@check_logged_in
 def view_the_log():
     with UseDatabase('appdatabase.db') as cursor:
         _SQL = """select phrase, letters, ip, browser_string, results from users"""
@@ -74,7 +89,9 @@ def view_the_log():
                                the_row_titles=titles,
                                the_data=contents, )
 
-app.run(debug=True)
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
 
 
